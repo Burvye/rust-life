@@ -12,24 +12,36 @@ use std::time::Duration;
 fn main() -> Result<(), core::convert::Infallible> {
     println!("Hello, world!");
 
-    let mut display = SimulatorDisplay::<BinaryColor>::new(Size::new(100, 60));
-    let output_settings = OutputSettingsBuilder::new().scale(10).build();
-    let mut window = Window::new("embedded graphics window", &output_settings);
+    let mut display = SimulatorDisplay::<BinaryColor>::new(Size::new(1000, 600));
+    let output_settings = OutputSettingsBuilder::new().scale(1).build();
+    let mut window = Window::new("life", &output_settings);
     window.update(&mut display);
     let mut paused = false;
+    let mut destroy = false;
     'running: loop {
         for event in window.events() {
             match event {
                 SimulatorEvent::Quit => break 'running,
                 SimulatorEvent::MouseButtonDown { point, mouse_btn } => {
-                    println!("Mouse click at {:?} with {:?}", point, mouse_btn);
-                    spawn_cell(point).draw(&mut display);
+                    if !destroy {
+                        println!("Construction click at {:?} with {:?}", point, mouse_btn);
+                        spawn_cell(point).draw(&mut display);
+                    } else {
+                        println!("Destruction click at {:?} with {:?}", point, mouse_btn);
+                        destroy_cell(point).draw(&mut display);
+                    }
                 }
                 SimulatorEvent::KeyDown {
                     keycode: Keycode::SPACE,
                     ..
                 } => {
                     paused = !paused;
+                }
+                SimulatorEvent::KeyDown {
+                    keycode: Keycode::X,
+                    ..
+                } => {
+                    destroy = !destroy;
                 }
                 _ => {}
             }
@@ -61,6 +73,9 @@ fn main() -> Result<(), core::convert::Infallible> {
 fn spawn_cell(point: Point) -> Pixel<BinaryColor> {
     Pixel(point, BinaryColor::On)
 }
+fn destroy_cell(point: Point) -> Pixel<BinaryColor> {
+    Pixel(point, BinaryColor::Off)
+}
 
 fn apply_rules(point: Point, display: &mut SimulatorDisplay<BinaryColor>) -> Pixel<BinaryColor> {
     let mut neighbor_count = 0;
@@ -73,9 +88,9 @@ fn apply_rules(point: Point, display: &mut SimulatorDisplay<BinaryColor>) -> Pix
         }
     }
     match neighbor_count {
-        0..=2 => Pixel(point, BinaryColor::Off),
-        3 => Pixel(point, BinaryColor::On),
-        4.. => Pixel(point, BinaryColor::Off),
+        0..=1 => Pixel(point, BinaryColor::Off),
+        3..=4 => Pixel(point, BinaryColor::On),
+        5.. => Pixel(point, BinaryColor::Off),
         _ => Pixel(point, BinaryColor::Off),
     }
 }
